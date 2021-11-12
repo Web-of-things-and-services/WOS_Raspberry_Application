@@ -1,0 +1,22 @@
+{
+  "name": "wos_raspberry_application",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/RaspberryClient.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Web-of-things-and-services/WOS_Raspberry_Application.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Web-of-things-and-services/WOS_Raspberry_Application/issues"
+  },
+  "homepage": "https://github.com/Web-of-things-and-services/WOS_Raspberry_Application#readme",
+  "devDependencies": {
+    "socket.io-client": "^4.3.2"
+  }
+}
