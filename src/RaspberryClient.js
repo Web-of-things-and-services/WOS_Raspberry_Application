@@ -6,12 +6,23 @@ export class RaspberryClient {
             reconnection: true,
             reconnectionAttempts: 3,
             reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000
+            reconnectionDelayMax: 5000,
+            autoConnect: false
+        })
+
+        this.addBasicListeners()
+    }
+
+    addBasicListeners() {
+        this.socket.onAny((event, ...args) => {
+            console.log(`Received : ${event}`)
+            console.log(args)
         })
     }
 
-    run() {
 
+    run() {
+        this.socket.connect()
     }
 }
 
