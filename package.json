@@ -18,5 +18,8 @@
   "homepage": "https://github.com/Web-of-things-and-services/WOS_Raspberry_Application#readme",
   "devDependencies": {
     "socket.io-client": "^4.3.2"
+  },
+  "dependencies": {
+    "sense-hat-led": "^1.2.0"
   }
 }
