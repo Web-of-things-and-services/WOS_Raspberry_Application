@@ -1,30 +1,14 @@
 const Column = require("./Column")
-
+const getSenseHat = require("./getSenseHat")
 const io = require("socket.io-client");
+const ColumnFullException = require("./exceptions/ColumnFullException");
 
-let LEDs = null
-try {
-    LEDs = require("sense-hat-led")
-} catch (err) {
-    console.log("Error when loading sense-hat : ", err.message)
-    LEDs = new class fake_raspberry {
-        setPixel(p1, p2, p3) {
-            console.log("function setpixel")
-            console.log(p1,p2,p3)
-        }
-
-        clear(p1) {
-            console.log("function clear")
-            console.log(p1)
-        }
-    }
-
-}
+let LEDs = getSenseHat()
 
 class GameHandler {
     sense_leds_size = 8
     number_of_lines = 6
-    number_of_columns = 7
+    number_of_column = 7
 
     base_color = [255, 255, 255]
     red_color = [255, 0, 0]
@@ -42,11 +26,23 @@ class GameHandler {
         this.initGameArray()
         this.setLedsFromGameArray()
         LEDs.clear(this.base_color)
+        console.log("Game handler initialized : ", this.game_array)
     }
 
     playInColumn(column_index, symbol) {
-        this.game_array[column_index].playMove(symbol)
-        this.setLedsFromColumn(column_index, this.game_array[column_index])
+        if (column_index >= this.number_of_column) {
+            console.log(`Column number received is too big ! Received ${column_index} when max is ${this.number_of_column - 1} (${this.number_of_column} columns in the game)`)
+            return
+        }
+        console.log(`Column ${column_index - 1} : `, this.game_array[column_index - 1])
+        console.log(`Column ${column_index} : `, this.game_array[column_index])
+        try {
+            this.game_array[column_index].playMove(symbol)
+            this.setLedsFromColumn(column_index, this.game_array[column_index])
+            console.log("Game handler updated : ", this.game_array)
+        } catch (err) {
+            console.log("Error when playing in column : ", err.message)
+        }
     }
 
     setLedsFromGameArray() {
@@ -85,7 +81,7 @@ class GameHandler {
     }*/
 
     initGameArray() {
-        for (let column_index = 0; column_index < this.number_of_columns; column_index++) {
+        for (let column_index = 0; column_index < this.number_of_column; column_index++) {
             this.game_array.push(new Column(this.number_of_lines))
         }
     }

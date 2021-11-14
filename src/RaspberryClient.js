@@ -1,6 +1,6 @@
 const GameHandler = require("./GameHandler")
+const {io} = require("socket.io-client");
 
-const io = require('socket.io-client');
 
 class RaspberryClient {
     default_username = "Raspberry"
@@ -8,7 +8,7 @@ class RaspberryClient {
     gameHandler = null
 
     constructor(config) {
-        this.socket = io(`${config.server.address}:${config.server}`, {
+        this.socket = io(config.server.address, {
             reconnection: true,
             reconnectionAttempts: 3,
             reconnectionDelay: 1000,
@@ -24,7 +24,7 @@ class RaspberryClient {
 
     addBasicListeners() {
         this.socket.onAny((event, ...args) => {
-            console.log(`Client received : ${event} with ${args}`)
+            console.log(`Client received : ${event} with`, args)
         })
 
         this.socket.on("connect_error", (error) => {
@@ -40,9 +40,8 @@ class RaspberryClient {
 
     addGameListeners() {
         this.socket.on("new_move", (payload) => {
-            console.log(`New move received : ${payload}`)
-            this.gameHandler.playInColumn(payload.column, "R")
-            //jouer le coup sur le plateau
+            console.log(`New move received : `, payload)
+            this.gameHandler.playInColumn(payload.column, payload.symbol)
         })
 
         this.socket.on("game_status", (payload) => {
@@ -79,6 +78,7 @@ class RaspberryClient {
     }
 
     run() {
+        console.log("Connecting the socket")
         this.socket.connect()
     }
 }

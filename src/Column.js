@@ -1,15 +1,11 @@
-class ColumnFullException extends Error {
-    constructor() {
-        super("Column is full ! You can't place a token here.");
-    }
-}
+const ColumnFullException = require("./exceptions/ColumnFullException");
 
 class Column {
-    size = null
+    number_of_lines = null
     symbols = []
 
-    constructor(size) {
-        this.size = size
+    constructor(number_of_lines) {
+        this.number_of_lines = number_of_lines
     }
 
     /**
@@ -19,15 +15,11 @@ class Column {
      * @returns {number} - Line at which it was placed
      */
     playMove(symbol) {
-        if (symbol.length > this.size) {
-            throw new ColumnFullException()
+        if (this.symbols.length >= this.number_of_lines) {
+            throw new ColumnFullException(this.number_of_lines, this.symbols.length)
         }
         this.symbols.push(symbol)
         return this.symbols.length - 1
-    }
-
-    clear() {
-        this.symbols = []
     }
 }
 
