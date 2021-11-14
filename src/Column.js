@@ -4,7 +4,7 @@ class ColumnFullException extends Error {
     }
 }
 
-export class Column {
+class Column {
     size = null
     symbols = []
 

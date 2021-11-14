@@ -1,8 +1,8 @@
-import {GameHandler} from "./GameHandler";
+const {GameHandler} = require("./GameHandler")
 
 const io = require('socket.io-client');
 
-export class RaspberryClient {
+class RaspberryClient {
     default_username = "Raspberry"
     socket = null
     gameHandler = null

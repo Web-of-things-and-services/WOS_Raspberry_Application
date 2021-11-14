@@ -1,9 +1,9 @@
-import {Column} from "./Column";
+const {Column} = require("./Column")
 
 const io = require("socket.io-client");
 const LEDs = require("sense-hat-led")
 
-export class GameHandler {
+class GameHandler {
     sense_leds_size = 8
     number_of_lines = 6
     number_of_columns = 7
