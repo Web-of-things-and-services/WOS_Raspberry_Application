@@ -30,3 +30,5 @@ class Column {
         this.symbols = []
     }
 }
+
+module.exports = Column

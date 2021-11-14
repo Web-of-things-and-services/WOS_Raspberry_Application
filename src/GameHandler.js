@@ -1,7 +1,25 @@
-const {Column} = require("./Column")
+const Column = require("./Column")
 
 const io = require("socket.io-client");
-const LEDs = require("sense-hat-led")
+
+let LEDs = null
+try {
+    LEDs = require("sense-hat-led")
+} catch (err) {
+    console.log("Error when loading sense-hat : ", err.message)
+    LEDs = new class fake_raspberry {
+        setPixel(p1, p2, p3) {
+            console.log("function setpixel")
+            console.log(p1,p2,p3)
+        }
+
+        clear(p1) {
+            console.log("function clear")
+            console.log(p1)
+        }
+    }
+
+}
 
 class GameHandler {
     sense_leds_size = 8
@@ -72,3 +90,5 @@ class GameHandler {
         }
     }
 }
+
+module.exports = GameHandler

@@ -1,4 +1,4 @@
-const {GameHandler} = require("./GameHandler")
+const GameHandler = require("./GameHandler")
 
 const io = require('socket.io-client');
 
@@ -82,3 +82,5 @@ class RaspberryClient {
         this.socket.connect()
     }
 }
+
+module.exports = RaspberryClient
