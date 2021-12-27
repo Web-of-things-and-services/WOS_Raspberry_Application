@@ -5,7 +5,7 @@
   "main": "src/RaspberryClient.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/main.js"
+    "start": "nodemon src/main.js"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,7 @@
     "socket.io-client": "^4.3.2"
   },
   "dependencies": {
-    "sense-hat-led": "^1.2.0"
+    "sense-hat-led": "^1.2.0",
+    "sense-joystick": "^0.0.3"
   }
 }

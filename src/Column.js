@@ -1,11 +1,16 @@
 const ColumnFullException = require("./exceptions/ColumnFullException");
 
 class Column {
-    number_of_lines = null
-    symbols = []
+    numberOfLines = null
+    symbols = null
+    index = null
+    baseSymbol = null
 
-    constructor(number_of_lines) {
-        this.number_of_lines = number_of_lines
+    constructor(index, numberOfLines, baseSymbol) {
+        this.index = index
+        this.numberOfLines = numberOfLines
+        this.baseSymbol = baseSymbol
+        this.symbols = Array(numberOfLines).fill(baseSymbol)
     }
 
     /**
@@ -15,11 +20,15 @@ class Column {
      * @returns {number} - Line at which it was placed
      */
     playMove(symbol) {
-        if (this.symbols.length >= this.number_of_lines) {
-            throw new ColumnFullException(this.number_of_lines, this.symbols.length)
+        for (let row = 0; row < this.symbols.length; row++) {
+            if (this.symbols[row] === this.baseSymbol) {
+                this.symbols[row] = symbol
+                return row
+            }
         }
-        this.symbols.push(symbol)
-        return this.symbols.length - 1
+        //on a pas trouvé de row avec un symbole de base, donc la colonne est pleine et y'a une erreur
+        throw new ColumnFullException(this.numberOfLines, this.symbols.length)
+
     }
 }
 

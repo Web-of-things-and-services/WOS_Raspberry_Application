@@ -1,60 +1,42 @@
 const Column = require("./Column")
-const getSenseHat = require("./getSenseHat")
 const io = require("socket.io-client");
 const ColumnFullException = require("./exceptions/ColumnFullException");
-
-let LEDs = getSenseHat()
 
 class GameHandler {
     sense_leds_size = 8
     number_of_lines = 6
     number_of_column = 7
 
-    base_color = [255, 255, 255]
+    base_color = [0, 0, 0]
     red_color = [255, 0, 0]
     yellow_color = [255, 255, 0]
 
-    base_symbol = "B"
+    base_symbol = "."
     red_symbol = "R"
     yellow_symbol = "Y"
 
     game_started = false
     game_array = []
-    waiting_move = false
 
-    constructor() {
+    constructor(socket, LEDs, joystick) {
+        this.socket = socket
+        this.addGameListeners()
+
+        this.LEDs = LEDs
         this.initGameArray()
-        this.setLedsFromGameArray()
-        LEDs.clear(this.base_color)
-        console.log("Game handler initialized : ", this.game_array)
+        this.LEDs.sync.clear(this.base_color)
+
+        this.joystick = joystick
+        this.joystick.on("press", (direction) => {
+            console.log('Got button press in the direction: ', direction);
+        })
     }
 
     playInColumn(column_index, symbol) {
-        if (column_index >= this.number_of_column) {
-            console.log(`Column number received is too big ! Received ${column_index} when max is ${this.number_of_column - 1} (${this.number_of_column} columns in the game)`)
-            return
-        }
-        console.log(`Column ${column_index - 1} : `, this.game_array[column_index - 1])
-        console.log(`Column ${column_index} : `, this.game_array[column_index])
         try {
             this.game_array[column_index].playMove(symbol)
-            this.setLedsFromColumn(column_index, this.game_array[column_index])
-            console.log("Game handler updated : ", this.game_array)
         } catch (err) {
             console.log("Error when playing in column : ", err.message)
-        }
-    }
-
-    setLedsFromGameArray() {
-        for (const [index, column] of this.game_array.entries()) {
-            this.setLedsFromColumn(index, column)
-        }
-    }
-
-    setLedsFromColumn(column_index, column) {
-        let full_column = column.symbols.concat(new Array(this.number_of_lines - column.symbols.length).fill(this.base_symbol))
-        for (const [line_index, symbol] of full_column.entries()) {
-            LEDs.setPixel(column_index, this.sense_leds_size - 1 - line_index, this.getRGBColor(symbol))
         }
     }
 
@@ -70,20 +52,89 @@ class GameHandler {
         }
     }
 
-    /*fillGameArrayWithSymbol(symbol) {
-        for (let column_index = 0; column_index < this.number_of_columns; column_index++) {
-            let column = []
-            for (let line_index = 0; line_index < this.number_of_lines; line_index++) {
-                column[line_index] = symbol
-            }
-            this.game_array[column_index] = column
-        }
-    }*/
-
     initGameArray() {
         for (let column_index = 0; column_index < this.number_of_column; column_index++) {
-            this.game_array.push(new Column(this.number_of_lines))
+            this.game_array.push(new Column(column_index, this.number_of_lines, this.base_symbol))
         }
+    }
+
+    endGame() {
+        this.game_started = false
+        this.game_array = []
+    }
+
+    createPixelsMatrix() {
+        let matrix = []
+
+        for (let row = 0; row < this.number_of_lines; row++) {
+            let myRow = []
+
+            for (const col of this.game_array) {
+                try {
+                    myRow.push(col.symbols[row])
+                } catch (e) {
+                    console.log(`Symbole à colonne ${col} et ligne ${row} existe pas`)
+                    console.log(e)
+                }
+            }
+            for (let fillColumns = 0; fillColumns < this.sense_leds_size - this.number_of_column; fillColumns++) {
+                myRow.push(this.base_symbol)
+            }
+
+            console.log(`Row ${row} (${myRow.length}) : ${myRow}`)
+            matrix.unshift(...myRow)
+        }
+
+        for (let fillRow = 0; fillRow < this.sense_leds_size - this.number_of_lines; fillRow++ ) {
+            let rowConstructed = Array(this.sense_leds_size).fill(this.base_symbol)
+            console.log(`Fill row ${fillRow} : ${rowConstructed}`)
+            matrix.unshift(...rowConstructed)
+        }
+
+        return matrix.map((symbol) => {
+            return this.getRGBColor(symbol)
+        })
+    }
+
+    addGameListeners() {
+        this.socket.on("new_move", (payload) => {
+            console.log(`New move received : `, payload)
+            this.LEDs.sync.showMessage(`Coup recu`, 0.05)
+            this.playInColumn(payload.column, payload.symbol)
+            this.LEDs.sync.setPixels(this.createPixelsMatrix())
+        })
+
+        this.socket.on("game_status", (payload) => {
+            console.log(`Game status received : ${payload}`)
+            //voir si partie en cours sinon echec
+        })
+
+        this.socket.on("start_game", () => {
+            this.LEDs.sync.showMessage(`Début de partie imminent!`, 0.01)
+            //débuter la partie
+        })
+
+        this.socket.on("waiting_move", () => {
+            this.LEDs.sync.showMessage(`A ton tour !`, 0.01)
+        })
+
+        this.socket.on("stop_game", () => {
+            this.LEDs.sync.showMessage(`Partie annulée par un administrateur, aucun gagnant.`, 0.01)
+            this.endGame()
+        })
+
+        this.socket.on("end_game", (pseudo) => {
+            if (pseudo === this.socket.username) {
+                this.LEDs.sync.showMessage(`Tu remportes la victoire ! Partie terminée.`, 0.01)
+            } else {
+                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire ! Partie terminée.`, 0.01)
+            }
+            this.endGame()
+        })
+
+        this.socket.on("message", (message) => {
+            this.LEDs.sync.showMessage(message, 0.01)
+        })
     }
 }
 
