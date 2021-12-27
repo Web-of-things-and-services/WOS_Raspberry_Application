@@ -1,26 +1,26 @@
 const Column = require("./Column")
-const io = require("socket.io-client");
-const ColumnFullException = require("./exceptions/ColumnFullException");
 
 class GameHandler {
-    sense_leds_size = 8
-    number_of_lines = 6
-    number_of_column = 7
+    ledsMatrixSize = 8
+    gameMatrixNumberOfRows = 6
+    gameMatrixNumberOfColumns = 7
 
-    base_color = [0, 0, 0]
-    red_color = [255, 0, 0]
-    yellow_color = [255, 255, 0]
-    joystick_color = [0, 0, 255]
-    joystick_background_color = [255, 255, 255]
+    rgbBase = [0, 0, 0]
+    rgbRed = [241, 56, 56]
+    rgbYellow = [240, 243, 58]
+    rgbGreen = [8, 169, 0]
+    rgbJoystick = [0, 0, 255]
+    rgbJoystickBackground = [100, 100, 100]
 
-    base_symbol = "."
-    red_symbol = "R"
-    yellow_symbol = "Y"
-    joystick_symbol = "JOYSTICK"
-    joystick_background_symbol = "JOYSTICK_BG"
+    symbolBase = "."
+    symbolRed = "R"
+    symbolYellow = "Y"
+    symbolGreen = "G"
+    symbolJoystick = "JOYSTICK"
+    symbolJoystickBackground = "JOYSTICK_BG"
 
-    game_started = false
-    game_array = []
+    gameStarted = false
+    gameArray = []
     waitingJoystickInput = false
     joystickXPosition = 0
 
@@ -30,54 +30,78 @@ class GameHandler {
 
         this.LEDs = LEDs
         this.initGameArray()
-        this.LEDs.sync.clear(this.base_color)
+        this.LEDs.sync.clear(this.rgbBase)
 
         this.joystick = joystick
     }
 
-    playInColumn(column_index, symbol) {
+    /**
+     * Jouer un coup dans une colonne
+     * @param columnIndex
+     * @param symbol
+     */
+    playInColumn(columnIndex, symbol) {
         try {
-            this.game_array[column_index].playMove(symbol)
+            this.gameArray[columnIndex].playMove(symbol)
         } catch (err) {
             console.log("Error when playing in column : ", err.message)
         }
     }
 
+    /**
+     * Obtenir la valeur RGB correspondante à un symbole
+     * @param symbol
+     * @returns {number[]|*}
+     */
     getRGBColor(symbol) {
         if (Array.isArray(symbol) && symbol.length === 3) return symbol //already hexadecimal color
         switch (symbol) {
-            case this.yellow_symbol:
-                return this.yellow_color
-            case this.red_symbol:
-                return this.red_color
-            case this.joystick_symbol:
-                return this.joystick_color
-            case this.joystick_background_symbol:
-                return this.joystick_background_color
+            case this.symbolYellow:
+                return this.rgbYellow
+            case this.symbolRed:
+                return this.rgbRed
+            case this.symbolGreen:
+                return this.rgbGreen
+            case this.symbolJoystick:
+                return this.rgbJoystick
+            case this.symbolJoystickBackground:
+                return this.rgbJoystickBackground
             default:
-                return this.base_color
+                return this.rgbBase
         }
     }
 
+    /**
+     * Initialiser la variable avec le plateau de jeu à vide
+     */
     initGameArray() {
-        for (let column_index = 0; column_index < this.number_of_column; column_index++) {
-            this.game_array.push(new Column(column_index, this.number_of_lines, this.base_symbol))
+        for (let column_index = 0; column_index < this.gameMatrixNumberOfColumns; column_index++) {
+            this.gameArray.push(new Column(column_index, this.gameMatrixNumberOfRows, this.symbolBase))
         }
     }
 
+    /**
+     * Reset les valeurs de l'objet aux valeurs de départ
+     */
     endGame() {
-        this.game_started = false
-        this.game_array = []
+        this.gameStarted = false
+        this.gameArray = []
         this.waitingJoystickInput = false
     }
 
+    /**
+     * Retourne un tableau/liste de la taille des LEDs à partir des valeurs de l'objet
+     * @returns {(number[]|*)[]}
+     */
     createPixelsMatrix() {
         let matrix = []
 
-        for (let row = 0; row < this.number_of_lines; row++) {
+        //creation des lignes de la grille de jeu
+
+        for (let row = 0; row < this.gameMatrixNumberOfRows; row++) {
             let myRow = []
 
-            for (const col of this.game_array) {
+            for (const col of this.gameArray) {
                 try {
                     myRow.push(col.symbols[row])
                 } catch (e) {
@@ -86,61 +110,65 @@ class GameHandler {
                 }
             }
 
-            for (let fillColumns = 0; fillColumns < this.sense_leds_size - this.number_of_column; fillColumns++) {
-                myRow.push(this.base_symbol)
+            for (let fillColumns = 0; fillColumns < this.ledsMatrixSize - this.gameMatrixNumberOfColumns; fillColumns++) {
+                myRow.push(this.symbolBase)
             }
 
             //console.log(`Row ${row} (${myRow.length}) : ${myRow}`)
             matrix.unshift(...myRow)
         }
 
+        //creation des lignes entre l'emplacement du joystick et le jeu
+
         //-1 dans le for pour qu'on puisse créer la firstrow à la main ensuite (avec joystick indicateur)
-        for (let fillRow = 0; fillRow < this.sense_leds_size - this.number_of_lines -  1; fillRow++ ) {
-            let rowConstructed = Array(this.sense_leds_size).fill(this.base_symbol)
+        for (let fillRow = 0; fillRow < this.ledsMatrixSize - this.gameMatrixNumberOfRows - 1; fillRow++) {
+            let rowConstructed = Array(this.ledsMatrixSize).fill(this.symbolBase)
             //console.log(`Fill row ${fillRow} : ${rowConstructed}`)
             matrix.unshift(...rowConstructed)
         }
 
+        //creation de la première ligne de la matrice avec soit le joystick soit une ligne vide
+
         let firstRow
         if (this.waitingJoystickInput) {
-            firstRow = Array(this.sense_leds_size).fill(this.joystick_background_symbol)
-            firstRow[this.sense_leds_size - 1] = this.base_symbol //dernier colonne impossible à jouer
-            firstRow[this.joystickXPosition] = this.joystick_symbol
+            firstRow = Array(this.ledsMatrixSize).fill(this.symbolJoystickBackground)
+            firstRow[this.joystickXPosition] = this.symbolJoystick
         } else {
-            firstRow = Array(this.sense_leds_size).fill(this.base_symbol)
+            firstRow = Array(this.ledsMatrixSize).fill(this.symbolBase)
         }
-
-        //console.log(`First row : ${firstRow}`)
+        firstRow[this.ledsMatrixSize-1] = this.gameStarted ? this.symbolGreen : this.symbolRed;
         matrix.unshift(...firstRow)
 
+        //transformation symboles en couleurs RGB
         return matrix.map((symbol) => {
             return this.getRGBColor(symbol)
         })
     }
 
+    /**
+     * Afficher l'entiereté de la matrice de leds avec les dernières valeurs du jeu
+     */
     renderPixels() {
         let matrix = this.createPixelsMatrix()
         this.LEDs.sync.setPixels(matrix)
     }
 
+    /**
+     * Ajouter les listeners de socket.io pour les évènements relatifs au gameplay
+     */
     addGameListeners() {
         this.socket.on("new_move", (payload) => {
             if (payload.name === this.socket.username) {
                 return //pas ses propres events
             }
-            console.log(`New move received : `, payload)
-            this.LEDs.sync.showMessage(`Coup recu`, 0.05)
+            this.LEDs.sync.showMessage(`Coup recu!`, 0.05)
             this.playInColumn(payload.column, "Y")
             this.renderPixels()
         })
 
-        this.socket.on("game_status", (payload) => {
-            console.log(`Game status received : ${payload}`)
-            //voir si partie en cours sinon echec
-        })
-
         this.socket.on("start_game", () => {
             this.LEDs.sync.showMessage(`Début de partie imminent!`, 0.05)
+            this.gameStarted = true
             this.endGame() //on remet le plateau à 0 au cas où
         })
 
@@ -149,30 +177,25 @@ class GameHandler {
                 return
             }
             this.LEDs.sync.showMessage(`A ton tour !`, 0.05)
-            this.joystickXPosition = Math.floor(this.sense_leds_size/2)
+            this.joystickXPosition = Math.floor(this.ledsMatrixSize / 2)
             this.waitingJoystickInput = true
             this.joystick.on("press", (direction) => {
                 switch (direction) {
                     case "click":
                         this.waitingJoystickInput = false
-                        this.socket.emit("new_move", {column : this.joystickXPosition, name: this.socket.username})
-                        this.playInColumn(this.joystickXPosition, this.red_symbol) //à changer par symbole de la raspberry
-                        console.log(this.joystick.on)
-                        console.log(this.joystick)
-                        console.log(this.joystick._events)
-                        console.log(this.joystick.press)
-                        this.joystick._events = {}
-                        this.joystick.press = {}
+                        this.socket.emit("new_move", {column: this.joystickXPosition, name: this.socket.username})
+                        this.playInColumn(this.joystickXPosition, this.symbolRed) //à changer par symbole de la raspberry
+                        this.joystick._events = {} //le quel est le bon ?
+                        this.joystick.press = {} //le quel est le bon ?
                         break;
                     case "right":
-                        this.joystickXPosition = Math.min(this.number_of_column - 1, this.joystickXPosition  + 1)
+                        this.joystickXPosition = Math.min(this.gameMatrixNumberOfColumns - 1, this.joystickXPosition + 1)
                         break;
                     case "left":
                         this.joystickXPosition = Math.max(0, this.joystickXPosition - 1)
                         break;
                 }
                 this.renderPixels()
-                console.log('Got button press in the direction: ', direction);
             })
             this.renderPixels()
         })

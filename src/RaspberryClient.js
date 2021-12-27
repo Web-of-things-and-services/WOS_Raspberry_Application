@@ -11,7 +11,6 @@ class RaspberryClient {
     constructor(config) {
         this.socket = io(config.server.address, {
             reconnection: true,
-            reconnectionAttempts: 3,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             autoConnect: false
@@ -28,22 +27,26 @@ class RaspberryClient {
         })
     }
 
+    /**
+     * Ajout listeners évènements basiques de socket.io
+     */
     addBasicListeners() {
         this.socket.onAny((event, ...args) => {
             console.log(`Client received : ${event} with`, args)
         })
 
         this.socket.on("connect_error", (error) => {
-            console.log(`Connexion error ${error}`)
-            //afficher erreur sur raspberry
+            this.LEDs.sync.showMessage("Erreur de connexion", 0.05)
         })
 
         this.socket.on("disconnect", () => {
-            console.log("Disconnection received")
-            //deconnexion du serveur
+            this.LEDs.sync.showMessage("Deconnexion du serveur", 0.05)
         })
     }
 
+    /**
+     * Connexion de la socket au serveur et rejoindre la partie
+     */
     run() {
         console.log("Connecting the socket")
         this.socket.connect()
