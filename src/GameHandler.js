@@ -10,13 +10,19 @@ class GameHandler {
     base_color = [0, 0, 0]
     red_color = [255, 0, 0]
     yellow_color = [255, 255, 0]
+    joystick_color = [0, 0, 255]
+    joystick_background_color = [255, 255, 255]
 
     base_symbol = "."
     red_symbol = "R"
     yellow_symbol = "Y"
+    joystick_symbol = "JOYSTICK"
+    joystick_background_symbol = "JOYSTICK_BG"
 
     game_started = false
     game_array = []
+    waitingJoystickInput = false
+    joystickXPosition = 0
 
     constructor(socket, LEDs, joystick) {
         this.socket = socket
@@ -27,9 +33,6 @@ class GameHandler {
         this.LEDs.sync.clear(this.base_color)
 
         this.joystick = joystick
-        this.joystick.on("press", (direction) => {
-            console.log('Got button press in the direction: ', direction);
-        })
     }
 
     playInColumn(column_index, symbol) {
@@ -47,6 +50,10 @@ class GameHandler {
                 return this.yellow_color
             case this.red_symbol:
                 return this.red_color
+            case this.joystick_symbol:
+                return this.joystick_color
+            case this.joystick_background_symbol:
+                return this.joystick_background_color
             default:
                 return this.base_color
         }
@@ -61,6 +68,7 @@ class GameHandler {
     endGame() {
         this.game_started = false
         this.game_array = []
+        this.waitingJoystickInput = false
     }
 
     createPixelsMatrix() {
@@ -77,31 +85,53 @@ class GameHandler {
                     console.log(e)
                 }
             }
+
             for (let fillColumns = 0; fillColumns < this.sense_leds_size - this.number_of_column; fillColumns++) {
                 myRow.push(this.base_symbol)
             }
 
-            console.log(`Row ${row} (${myRow.length}) : ${myRow}`)
+            //console.log(`Row ${row} (${myRow.length}) : ${myRow}`)
             matrix.unshift(...myRow)
         }
 
-        for (let fillRow = 0; fillRow < this.sense_leds_size - this.number_of_lines; fillRow++ ) {
+        //-1 dans le for pour qu'on puisse créer la firstrow à la main ensuite (avec joystick indicateur)
+        for (let fillRow = 0; fillRow < this.sense_leds_size - this.number_of_lines -  1; fillRow++ ) {
             let rowConstructed = Array(this.sense_leds_size).fill(this.base_symbol)
-            console.log(`Fill row ${fillRow} : ${rowConstructed}`)
+            //console.log(`Fill row ${fillRow} : ${rowConstructed}`)
             matrix.unshift(...rowConstructed)
         }
+
+        let firstRow
+        if (this.waitingJoystickInput) {
+            firstRow = Array(this.sense_leds_size).fill(this.joystick_background_symbol)
+            firstRow[this.sense_leds_size - 1] = this.base_symbol //dernier colonne impossible à jouer
+            firstRow[this.joystickXPosition] = this.joystick_symbol
+        } else {
+            firstRow = Array(this.sense_leds_size).fill(this.base_symbol)
+        }
+
+        //console.log(`First row : ${firstRow}`)
+        matrix.unshift(...firstRow)
 
         return matrix.map((symbol) => {
             return this.getRGBColor(symbol)
         })
     }
 
+    renderPixels() {
+        let matrix = this.createPixelsMatrix()
+        this.LEDs.sync.setPixels(matrix)
+    }
+
     addGameListeners() {
         this.socket.on("new_move", (payload) => {
+            if (payload.name === this.socket.username) {
+                return //pas ses propres events
+            }
             console.log(`New move received : `, payload)
             this.LEDs.sync.showMessage(`Coup recu`, 0.05)
-            this.playInColumn(payload.column, payload.symbol)
-            this.LEDs.sync.setPixels(this.createPixelsMatrix())
+            this.playInColumn(payload.column, "Y")
+            this.renderPixels()
         })
 
         this.socket.on("game_status", (payload) => {
@@ -110,12 +140,41 @@ class GameHandler {
         })
 
         this.socket.on("start_game", () => {
-            this.LEDs.sync.showMessage(`Début de partie imminent!`, 0.01)
-            //débuter la partie
+            this.LEDs.sync.showMessage(`Début de partie imminent!`, 0.05)
+            this.endGame() //on remet le plateau à 0 au cas où
         })
 
-        this.socket.on("waiting_move", () => {
-            this.LEDs.sync.showMessage(`A ton tour !`, 0.01)
+        this.socket.on("display_turn_player", (nextPlayer) => {
+            if (nextPlayer !== this.socket.username) {
+                return
+            }
+            this.LEDs.sync.showMessage(`A ton tour !`, 0.05)
+            this.joystickXPosition = Math.floor(this.sense_leds_size/2)
+            this.waitingJoystickInput = true
+            this.joystick.on("press", (direction) => {
+                switch (direction) {
+                    case "click":
+                        this.waitingJoystickInput = false
+                        this.socket.emit("new_move", {column : this.joystickXPosition, name: this.socket.username})
+                        this.playInColumn(this.joystickXPosition, this.red_symbol) //à changer par symbole de la raspberry
+                        console.log(this.joystick.on)
+                        console.log(this.joystick)
+                        console.log(this.joystick._events)
+                        console.log(this.joystick.press)
+                        this.joystick._events = {}
+                        this.joystick.press = {}
+                        break;
+                    case "right":
+                        this.joystickXPosition = Math.min(this.number_of_column - 1, this.joystickXPosition  + 1)
+                        break;
+                    case "left":
+                        this.joystickXPosition = Math.max(0, this.joystickXPosition - 1)
+                        break;
+                }
+                this.renderPixels()
+                console.log('Got button press in the direction: ', direction);
+            })
+            this.renderPixels()
         })
 
         this.socket.on("stop_game", () => {

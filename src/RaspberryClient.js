@@ -47,6 +47,7 @@ class RaspberryClient {
     run() {
         console.log("Connecting the socket")
         this.socket.connect()
+        this.socket.emit("connect_player", this.default_username);
     }
 }
 
