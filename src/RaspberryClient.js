@@ -4,7 +4,7 @@ const getSenseHat = require("./getSenseHat")
 const getJoystick = require("./getJoystick")
 
 class RaspberryClient {
-    default_username = "Raspberry"
+    defaultUsername = "Raspberry"
     socket = null
     gameHandler = null
 
@@ -15,7 +15,7 @@ class RaspberryClient {
             reconnectionDelayMax: 5000,
             autoConnect: false
         })
-        this.socket.username = this.default_username
+        this.socket.username = this.defaultUsername
         this.LEDs = getSenseHat()
         this.addBasicListeners()
 
@@ -32,7 +32,7 @@ class RaspberryClient {
      */
     addBasicListeners() {
         this.socket.onAny((event, ...args) => {
-            console.log(`Client received : ${event} with`, args)
+            console.log(`${this.defaultUsername} received ${event} with args : `, args)
         })
 
         this.socket.on("connect_error", (error) => {
@@ -50,7 +50,7 @@ class RaspberryClient {
     run() {
         console.log("Connecting the socket")
         this.socket.connect()
-        this.socket.emit("connect_player", this.default_username);
+        this.socket.emit("connect_player", this.defaultUsername);
     }
 }
 

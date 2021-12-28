@@ -90,7 +90,7 @@ class GameHandler {
     }
 
     /**
-     * Retourne un tableau/liste de la taille des LEDs à partir des valeurs de l'objet
+     * Retourne un tableau/liste de la taille des LEDs à partir des propriétés du gameHandler
      * @returns {(number[]|*)[]}
      */
     createPixelsMatrix() {
@@ -127,7 +127,7 @@ class GameHandler {
             matrix.unshift(...rowConstructed)
         }
 
-        //creation de la première ligne de la matrice avec soit le joystick soit une ligne vide
+        //creation de la première ligne de la matrice avec soit le joystick si c'est à nous de jouer soit une ligne vide
 
         let firstRow
         if (this.waitingJoystickInput) {
@@ -136,7 +136,11 @@ class GameHandler {
         } else {
             firstRow = Array(this.ledsMatrixSize).fill(this.symbolBase)
         }
+
+        //ajout d'un petit indicateur lumineux pr savoir si la partie est en cours
+
         firstRow[this.ledsMatrixSize-1] = this.gameStarted ? this.symbolGreen : this.symbolRed;
+
         matrix.unshift(...firstRow)
 
         //transformation symboles en couleurs RGB
@@ -166,13 +170,29 @@ class GameHandler {
             this.renderPixels()
         })
 
+        this.socket.on("game_status", (payload) => {
+            if (!payload.gameStarted) {
+                return //si la game a pas commencé osef de la rejoindre
+            }
+            this.gameStarted = payload.gameStarted
+            this.initGameArray()
+            this.LEDs.sync.clear(this.rgbBase)
+            for (const move in payload.listMovesPlayed) {
+                this.playInColumn(move.column, "R")
+            }
+            if (payload.nextPlayer === this.socket.username) {
+                this.waitingJoystickInput = true
+            }
+            this.renderPixels()
+        })
+
         this.socket.on("start_game", () => {
             this.LEDs.sync.showMessage(`Début de partie imminent!`, 0.05)
             this.gameStarted = true
             this.endGame() //on remet le plateau à 0 au cas où
         })
 
-        this.socket.on("display_turn_player", (nextPlayer) => {
+        this.socket.on("waiting_move", (nextPlayer) => {
             if (nextPlayer !== this.socket.username) {
                 return
             }
