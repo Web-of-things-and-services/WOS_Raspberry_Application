@@ -33,6 +33,8 @@ class GameHandler {
         this.LEDs.sync.clear(this.rgbBase)
 
         this.joystick = joystick
+
+        this.socket.emit("game_status")
     }
 
     /**
@@ -75,6 +77,7 @@ class GameHandler {
      * Initialiser la variable avec le plateau de jeu à vide
      */
     initGameArray() {
+        this.gameArray = []
         for (let column_index = 0; column_index < this.gameMatrixNumberOfColumns; column_index++) {
             this.gameArray.push(new Column(column_index, this.gameMatrixNumberOfRows, this.symbolBase))
         }
@@ -85,8 +88,9 @@ class GameHandler {
      */
     endGame() {
         this.gameStarted = false
-        this.gameArray = []
+        this.initGameArray()
         this.waitingJoystickInput = false
+        this.LEDs.sync.clear(this.rgbBase)
     }
 
     /**
@@ -143,6 +147,8 @@ class GameHandler {
 
         matrix.unshift(...firstRow)
 
+        console.log(matrix.length)
+
         //transformation symboles en couleurs RGB
         return matrix.map((symbol) => {
             return this.getRGBColor(symbol)
@@ -165,79 +171,94 @@ class GameHandler {
             if (payload.name === this.socket.username) {
                 return //pas ses propres events
             }
-            this.LEDs.sync.showMessage(`Coup recu!`, 0.05)
+            this.LEDs.sync.showMessage(`Coup recu!`, 0.02)
             this.playInColumn(payload.column, "Y")
             this.renderPixels()
         })
 
         this.socket.on("game_status", (payload) => {
-            if (!payload.gameStarted) {
-                return //si la game a pas commencé osef de la rejoindre
-            }
-            this.gameStarted = payload.gameStarted
-            this.initGameArray()
-            this.LEDs.sync.clear(this.rgbBase)
-            for (const move in payload.listMovesPlayed) {
-                this.playInColumn(move.column, "R")
-            }
-            if (payload.nextPlayer === this.socket.username) {
-                this.waitingJoystickInput = true
+            this.endGame()
+            if (payload.gameStarted) {
+                this.gameStarted = true
+                for (const move of payload.listMovesPlayed) {
+                    let symbol = "Y"
+                    if (move.name === this.socket.username) {
+                        symbol = "R"
+                    }
+                    this.playInColumn(move.column, symbol)
+                }
+                if (payload.nextPlayer === this.socket.username) {
+                    this.waitingInput()
+                }
             }
             this.renderPixels()
         })
 
         this.socket.on("start_game", () => {
-            this.LEDs.sync.showMessage(`Début de partie imminent!`, 0.05)
+            this.LEDs.sync.showMessage(`Debut de partie!`, 0.03)
             this.gameStarted = true
-            this.endGame() //on remet le plateau à 0 au cas où
+            //this.endGame() //on remet le plateau à 0 au cas où
+            this.renderPixels()
         })
 
         this.socket.on("waiting_move", (nextPlayer) => {
             if (nextPlayer !== this.socket.username) {
                 return
             }
-            this.LEDs.sync.showMessage(`A ton tour !`, 0.05)
-            this.joystickXPosition = Math.floor(this.ledsMatrixSize / 2)
-            this.waitingJoystickInput = true
-            this.joystick.on("press", (direction) => {
-                switch (direction) {
-                    case "click":
-                        this.waitingJoystickInput = false
-                        this.socket.emit("new_move", {column: this.joystickXPosition, name: this.socket.username})
-                        this.playInColumn(this.joystickXPosition, this.symbolRed) //à changer par symbole de la raspberry
-                        this.joystick._events = {} //le quel est le bon ?
-                        this.joystick.press = {} //le quel est le bon ?
-                        break;
-                    case "right":
-                        this.joystickXPosition = Math.min(this.gameMatrixNumberOfColumns - 1, this.joystickXPosition + 1)
-                        break;
-                    case "left":
-                        this.joystickXPosition = Math.max(0, this.joystickXPosition - 1)
-                        break;
-                }
-                this.renderPixels()
-            })
+            this.waitingInput()
+            this.renderPixels()
+        })
+
+        this.socket.on("bad_move", (payload) => {
+            if (payload.faultyPlayer !== this.socket.username) {
+                return //on affiche pas les fautes des autres joueurs
+            }
+            this.LEDs.sync.showMessage(payload.error, 0.02)
+            this.waitingInput()
             this.renderPixels()
         })
 
         this.socket.on("stop_game", () => {
-            this.LEDs.sync.showMessage(`Partie annulée par un administrateur, aucun gagnant.`, 0.01)
+            this.LEDs.sync.showMessage(`Partie annulee par un administrateur`, 0.02)
             this.endGame()
         })
 
         this.socket.on("end_game", (pseudo) => {
             if (pseudo === this.socket.username) {
-                this.LEDs.sync.showMessage(`Tu remportes la victoire ! Partie terminée.`, 0.01)
+                this.LEDs.sync.showMessage(`Tu remportes la victoire! Partie terminee.`, 0.02)
             } else {
-                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire ! Partie terminée.`, 0.01)
+                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire! Partie terminee.`, 0.02)
             }
             this.endGame()
         })
 
         this.socket.on("message", (message) => {
-            this.LEDs.sync.showMessage(message, 0.01)
+            this.LEDs.sync.showMessage(message, 0.02)
+        })
+    }
+
+    waitingInput() {
+        this.LEDs.sync.showMessage(`A ton tour!`, 0.02)
+        this.joystickXPosition = Math.floor(this.ledsMatrixSize / 2)
+        this.waitingJoystickInput = true
+        this.joystick.on("press", (direction) => {
+            switch (direction) {
+                case "click":
+                    this.waitingJoystickInput = false
+                    this.socket.emit("new_move", {column: this.joystickXPosition, name: this.socket.username})
+                    this.playInColumn(this.joystickXPosition, this.symbolRed) //à changer par symbole de la raspberry
+                    this.joystick._events = {} //le quel est le bon ?
+                    this.joystick.press = {} //le quel est le bon ?
+                    break;
+                case "right":
+                    this.joystickXPosition = Math.min(this.gameMatrixNumberOfColumns - 1, this.joystickXPosition + 1)
+                    break;
+                case "left":
+                    this.joystickXPosition = Math.max(0, this.joystickXPosition - 1)
+                    break;
+            }
+            this.renderPixels()
         })
     }
 }
-
 module.exports = GameHandler
