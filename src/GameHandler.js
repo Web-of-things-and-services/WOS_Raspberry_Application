@@ -9,6 +9,7 @@ class GameHandler {
     rgbRed = [241, 56, 56]
     rgbYellow = [240, 243, 58]
     rgbGreen = [8, 169, 0]
+    rgbBlue = [0, 0, 255]
     rgbJoystick = [0, 0, 255]
     rgbJoystickBackground = [100, 100, 100]
 
@@ -171,7 +172,6 @@ class GameHandler {
             if (payload.name === this.socket.username) {
                 return //pas ses propres events
             }
-            this.LEDs.sync.showMessage(`Coup recu!`, 0.02)
             this.playInColumn(payload.column, "Y")
             this.renderPixels()
         })
@@ -195,7 +195,7 @@ class GameHandler {
         })
 
         this.socket.on("start_game", () => {
-            this.LEDs.sync.showMessage(`Debut de partie!`, 0.03)
+            this.LEDs.sync.showMessage(`Debut de partie!`, 0.1, this.rgbBlue)
             this.gameStarted = true
             //this.endGame() //on remet le plateau à 0 au cas où
             this.renderPixels()
@@ -213,32 +213,31 @@ class GameHandler {
             if (payload.faultyPlayer !== this.socket.username) {
                 return //on affiche pas les fautes des autres joueurs
             }
-            this.LEDs.sync.showMessage(payload.error, 0.02)
+            this.LEDs.sync.showMessage(payload.error, 0.1, this.rgbRed)
             this.waitingInput()
             this.renderPixels()
         })
 
         this.socket.on("stop_game", () => {
-            this.LEDs.sync.showMessage(`Partie annulee par un administrateur`, 0.02)
+            this.LEDs.sync.showMessage(`Partie annulee`, 0.1, this.rgbRed)
             this.endGame()
         })
 
         this.socket.on("end_game", (pseudo) => {
             if (pseudo === this.socket.username) {
-                this.LEDs.sync.showMessage(`Tu remportes la victoire! Partie terminee.`, 0.02)
+                this.LEDs.sync.showMessage(`GG! GG! GG!`, 0.1, this.rgbGreen)
             } else {
-                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire! Partie terminee.`, 0.02)
+                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire!`, 0.1, this.rgbRed)
             }
             this.endGame()
         })
 
         this.socket.on("message", (message) => {
-            this.LEDs.sync.showMessage(message, 0.02)
+            this.LEDs.sync.showMessage(message, 0.1, this.rgbBlue)
         })
     }
 
     waitingInput() {
-        this.LEDs.sync.showMessage(`A ton tour!`, 0.02)
         this.joystickXPosition = Math.floor(this.ledsMatrixSize / 2)
         this.waitingJoystickInput = true
         this.joystick.on("press", (direction) => {

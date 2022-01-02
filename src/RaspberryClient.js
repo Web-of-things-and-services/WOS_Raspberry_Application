@@ -36,11 +36,11 @@ class RaspberryClient {
         })
 
         this.socket.on("connect_error", (error) => {
-            this.LEDs.sync.showMessage("Erreur de connexion", 0.05)
+            this.LEDs.sync.showMessage("Erreur de connexion", 0.1, [241, 56, 56])
         })
 
         this.socket.on("disconnect", () => {
-            this.LEDs.sync.showMessage("Deconnexion du serveur", 0.05)
+            this.LEDs.sync.showMessage("Deconnexion", 0.1, [241, 56, 56])
         })
     }
 

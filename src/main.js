@@ -7,7 +7,7 @@ client.run()
 
 process.on("SIGINT", () => {
     let LEDs = getSenseHat()
-    LEDs.sync.showMessage(`Programme interrompu`, 0.05)
+    LEDs.sync.showMessage(`EXIT`, 0.1, [241, 56, 56])
     LEDs.sync.clear([0, 0, 0])
     process.exit()
 })
