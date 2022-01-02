@@ -4,7 +4,7 @@ function getSenseHat() {
     } catch (err) {
         console.log("Error when loading sense-hat : ", err.message)
         return new class fake_raspberry {
-            sync = new class cul {
+            sync = new class Sync {
                 showMessage(message, temps) {
                     console.log(message, temps)
                 }
