@@ -194,8 +194,11 @@ class GameHandler {
             this.renderPixels()
         })
 
-        this.socket.on("start_game", () => {
-            this.LEDs.sync.showMessage(`Debut de partie!`, 0.1, this.rgbBlue)
+        this.socket.on("start_game", (player) => {
+            if (player === this.socket.username) {
+                this.waitingInput()
+            }
+            this.LEDs.sync.showMessage(`Debut de partie!`, 0.05, this.rgbBlue)
             this.gameStarted = true
             //this.endGame() //on remet le plateau à 0 au cas où
             this.renderPixels()
@@ -213,7 +216,7 @@ class GameHandler {
             if (payload.faultyPlayer !== this.socket.username) {
                 return //on affiche pas les fautes des autres joueurs
             }
-            this.LEDs.sync.showMessage(payload.error, 0.1, this.rgbRed)
+            this.LEDs.sync.showMessage(payload.error, 0.03, this.rgbRed)
             this.waitingInput()
             this.renderPixels()
         })
