@@ -194,8 +194,8 @@ class GameHandler {
             this.renderPixels()
         })
 
-        this.socket.on("start_game", (player) => {
-            if (player === this.socket.username) {
+        this.socket.on("start_game", (payload) => {
+            if (payload.nextPlayer === this.socket.username) {
                 this.waitingInput()
             }
             this.LEDs.sync.showMessage(`Debut de partie!`, 0.05, this.rgbBlue)
