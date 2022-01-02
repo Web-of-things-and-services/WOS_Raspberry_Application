@@ -222,21 +222,21 @@ class GameHandler {
         })
 
         this.socket.on("stop_game", () => {
-            this.LEDs.sync.showMessage(`Partie annulee`, 0.1, this.rgbRed)
+            this.LEDs.sync.showMessage(`Partie annulee`, 0.05, this.rgbRed)
             this.endGame()
         })
 
         this.socket.on("end_game", (pseudo) => {
             if (pseudo === this.socket.username) {
-                this.LEDs.sync.showMessage(`GG! GG! GG!`, 0.1, this.rgbGreen)
+                this.LEDs.sync.showMessage(`GG! GG! GG!`, 0.05, this.rgbGreen)
             } else {
-                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire!`, 0.1, this.rgbRed)
+                this.LEDs.sync.showMessage(`${pseudo} remporte la victoire!`, 0.05, this.rgbRed)
             }
             this.endGame()
         })
 
         this.socket.on("message", (message) => {
-            this.LEDs.sync.showMessage(message, 0.1, this.rgbBlue)
+            this.LEDs.sync.showMessage(message, 0.05, this.rgbBlue)
         })
     }
 
