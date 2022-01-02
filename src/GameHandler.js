@@ -224,6 +224,7 @@ class GameHandler {
         this.socket.on("stop_game", () => {
             this.LEDs.sync.showMessage(`Partie annulee`, 0.05, this.rgbRed)
             this.endGame()
+            this.renderPixels()
         })
 
         this.socket.on("end_game", (pseudo) => {
@@ -233,6 +234,7 @@ class GameHandler {
                 this.LEDs.sync.showMessage(`${pseudo} remporte la victoire!`, 0.05, this.rgbRed)
             }
             this.endGame()
+            this.renderPixels()
         })
 
         this.socket.on("message", (message) => {
